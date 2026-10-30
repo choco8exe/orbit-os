@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ORBIT Control</title>
+  <style>
+    :root{color-scheme:dark;font:13px system-ui,sans-serif;background:#20252b;color:#eaf2f8}
+    body{margin:0;padding:16px}label{display:block;margin:0 0 14px;color:#c5d0da}
+    select,input,button{box-sizing:border-box;width:100%;margin-top:6px;padding:9px;color:#fff;background:#111820;border:1px solid #53616e;border-radius:5px;font:inherit}
+    button{cursor:pointer;background:#172c42}button:hover{background:#254057}button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #45d9f4;outline-offset:2px}
+    .buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}p{line-height:1.5;color:#aeb9c3}#status{min-height:2.5em}
+  </style>
+</head>
+<body>
+  <label for="action">Action de cette touche
+    <select id="action">
+      <option value="orbit.open">Ouvrir ORBIT</option>
+      <option value="mission.open">Ouvrir Mission Control</option>
+      <option value="echo.open">Ouvrir Echo</option>
+      <option value="echo.copyLatest">Copier l’entrée Echo la plus récente</option>
+      <option value="echo.copyPrevious">Copier l’entrée Echo précédente</option>
+      <option value="echo.toggleMonitoring">Mettre la capture Echo en pause / reprise</option>
+      <option value="pulsar.open">Ouvrir Pulsar</option>
+      <option value="pulsar.togglePause">Mettre Pulsar en pause / reprise</option>
+      <option value="pulsar.runScenario">Lancer un scénario Pulsar activé</option>
+      <option value="core.open">Ouvrir Core</option>
+      <option value="timeline.open">Ouvrir Timeline</option>
+      <option value="settings.open">Ouvrir les paramètres</option>
+      <option value="workspaces.open">Ouvrir les espaces de travail</option>
+      <option value="pulse.open">Ouvrir Pulse</option>
+      <option value="pulse.toggleMonitoring">Mettre Pulse en pause / reprise</option>
+      <option value="pulse.summary">Afficher le temps Pulse de la semaine</option>
+    </select>
+  </label>
+  <label id="scenario-wrap" for="scenario" hidden>Scénario autorisé
+    <select id="scenario"><option value="">Appaire le Stream Deck pour charger les scénarios</option></select>
+  </label>
+  <p>Les actions Echo recopient directement sur le presse-papiers Windows; le texte ne s’affiche jamais sur les touches ni dans les journaux. Active séparément les autorisations Stream Deck et Echo dans ORBIT.</p>
+  <label for="pair-code">Code d’appairage temporaire
+    <input id="pair-code" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="Code affiché dans ORBIT">
+  </label>
+  <div class="buttons">
+    <button id="pair" type="button" disabled>Appairer</button>
+    <button id="unpair" type="button" disabled>Dissocier</button>
+  </div>
+  <p id="status" role="status" aria-live="polite">Connexion au compagnon Stream Deck…</p>
+  <script>
+    const ACTION_ID='com.orbitos.creator.orbit-control';
+    const action=document.getElementById('action'),scenario=document.getElementById('scenario'),scenarioWrap=document.getElementById('scenario-wrap'),code=document.getElementById('pair-code'),status=document.getElementById('status');
+    const pairButton=document.getElementById('pair'),unpairButton=document.getElementById('unpair');
+    let socket,propertyInspectorUUID,actionContext,actionId,pendingRequest=null,pendingTimer=0,settingsTimer=0,requestSequence=0,protocolReady=false;
+    function syncButtons(){const ready=protocolReady&&socket?.readyState===WebSocket.OPEN;pairButton.disabled=!ready||Boolean(pendingRequest);unpairButton.disabled=!ready||Boolean(pendingRequest)}
+    function send(payload){if(!protocolReady||socket?.readyState!==WebSocket.OPEN)return false;try{socket.send(JSON.stringify({event:'sendToPlugin',action:actionId,context:propertyInspectorUUID,payload}));return true}catch{return false}}
+    function beginRequest(event,waitingText,timeoutText){if(pendingRequest)return false;const requestId=`${Date.now()}-${++requestSequence}`;if(!send({event,requestId,...(event==='pair'?{code:code.value,port:45122}:{})})){status.textContent='Stream Deck n’a pas confirmé la connexion de cette action. Recharge ses réglages avant de réessayer.';syncButtons();return false}pendingRequest={event:event==='pair'?'pair-result':'unpair-result',requestId};status.textContent=waitingText;syncButtons();pendingTimer=window.setTimeout(()=>{if(pendingRequest?.requestId!==requestId)return;pendingRequest=null;pendingTimer=0;syncButtons();status.textContent=timeoutText},12000);return true}
+    function finishRequest(result){if(!pendingRequest||result.requestId!==pendingRequest.requestId||result.event!==pendingRequest.event)return false;window.clearTimeout(pendingTimer);pendingTimer=0;pendingRequest=null;syncButtons();if(result.event==='pair-result')status.textContent=result.ok?'Stream Deck appairé dans le coffre sécurisé Windows.':(result.error||'ORBIT a refusé l’appairage.');else status.textContent=result.ok?(result.remoteRevoked?'Stream Deck dissocié et jeton ORBIT révoqué.':'Jeton local supprimé; révoque aussi l’appairage dans ORBIT si nécessaire.'):(result.error||'ORBIT a refusé la dissociation.');return true}
+    function saveSettings(){send({event:'settings',settings:{action:action.value,scenarioId:scenario.value}})}
+    function requestScenarios(){send({event:'list-scenarios'})}
+    function updateAction(){scenarioWrap.hidden=action.value!=='pulsar.runScenario';saveSettings();if(action.value==='pulsar.runScenario')requestScenarios()}
+    function clearPending(){if(pendingTimer){window.clearTimeout(pendingTimer);pendingTimer=0}pendingRequest=null}
+    action.addEventListener('change',updateAction);scenario.addEventListener('change',saveSettings);
+    pairButton.addEventListener('click',()=>{if(!/^\d{6}$/.test(code.value)){status.textContent='Saisis le code temporaire à six chiffres affiché dans ORBIT.';code.focus();return}if(beginRequest('pair','Appairage sécurisé en cours…','Aucune réponse du compagnon après 12 secondes. Vérifie qu’ORBIT est ouvert et que le pont local est autorisé, puis réessaie.'))code.value=''});
+    unpairButton.addEventListener('click',()=>beginRequest('unpair','Dissociation en cours…','Aucune réponse du compagnon après 12 secondes. Vérifie qu’ORBIT est ouvert, puis réessaie.'));
+    window.connectElgatoStreamDeckSocket=(port,uuid,registerEvent,info,actionInfo)=>{
+      let details;
+      try{details=JSON.parse(actionInfo)}catch{status.textContent='Stream Deck n’a pas transmis les informations de cette action.';return}
+      if(details.action!==ACTION_ID||typeof details.context!=='string'||!details.context){status.textContent='Stream Deck a transmis un contexte d’action invalide. Recharge les réglages de ORBIT Control.';return}
+      actionId=ACTION_ID;propertyInspectorUUID=uuid;actionContext=details.context;protocolReady=false;
+      try{socket=new WebSocket(`ws://127.0.0.1:${port}`)}catch{status.textContent='Impossible d’ouvrir la connexion locale à Stream Deck.';syncButtons();return}
+      syncButtons();
+      socket.onopen=()=>{
+        try{
+          socket.send(JSON.stringify({event:registerEvent,uuid}));
+          window.setTimeout(()=>{if(socket?.readyState===WebSocket.OPEN&&!protocolReady)socket.send(JSON.stringify({event:'getSettings',action:actionId,context:propertyInspectorUUID}))},0);
+          settingsTimer=window.setTimeout(()=>{if(!protocolReady){status.textContent='Stream Deck n’a pas confirmé le contexte de cette action. Ferme puis rouvre les réglages de ORBIT Control.';syncButtons()}},5000);
+        }catch{status.textContent='La connexion locale à Stream Deck a échoué pendant son initialisation.';syncButtons()}
+      };
+      socket.onerror=()=>{clearPending();protocolReady=false;if(settingsTimer){window.clearTimeout(settingsTimer);settingsTimer=0}status.textContent='Impossible de joindre le compagnon Stream Deck. Vérifie son installation puis recharge les réglages de l’action.';syncButtons()};
+      socket.onclose=()=>{clearPending();protocolReady=false;if(settingsTimer){window.clearTimeout(settingsTimer);settingsTimer=0}status.textContent='Connexion Stream Deck interrompue. Recharge les réglages de l’action pour te reconnecter.';syncButtons()};
+      socket.onmessage=event=>{
+        let data;try{data=JSON.parse(event.data)}catch{return}
+        if(data.event==='didReceiveSettings'){
+          if(data.action!==ACTION_ID||typeof data.context!=='string'||data.context!==actionContext){status.textContent='Stream Deck a renvoyé un contexte d’action invalide.';return}
+          actionId=data.action;protocolReady=true;if(settingsTimer){window.clearTimeout(settingsTimer);settingsTimer=0}syncButtons();
+          const settings=data.payload?.settings??{};if(settings.action)action.value=settings.action;if(settings.scenarioId)scenario.value=settings.scenarioId;scenarioWrap.hidden=action.value!=='pulsar.runScenario';
+          if(!pendingRequest)status.textContent='Compagnon connecté. Saisis le code temporaire affiché dans ORBIT.';
+          if(action.value==='pulsar.runScenario')requestScenarios();
+        }
+        if(data.event==='sendToPropertyInspector'){
+          const result=data.payload??{};
+          if(result.event==='scenario-list'){
+            const current=scenario.value;scenario.replaceChildren();const items=result.scenarios??[];
+            if(!result.ok||items.length===0){const option=document.createElement('option');option.value='';option.textContent=result.ok?'Aucun scénario activé dans Pulsar':(result.error||'Impossible de lire Pulsar');scenario.append(option);status.textContent=result.ok?'Active un scénario dans Pulsar pour le rendre disponible ici.':(result.error||'Impossible de charger les scénarios.')}
+            else{for(const item of items){const option=document.createElement('option');option.value=item.id;option.textContent=item.name;scenario.append(option)}scenario.value=items.some(item=>item.id===current)?current:items[0].id;saveSettings();status.textContent='Choisis un scénario activé. Son exécution demandera toujours une confirmation dans ORBIT.'}
+            return;
+          }
+          finishRequest(result);
+        }
+      };
+    };
+    syncButtons();
+    syncButtons();
+  </script>
+</body>
+</html>

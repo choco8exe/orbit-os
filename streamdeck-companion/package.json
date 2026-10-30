@@ -1,0 +1,30 @@
+{
+  "name": "orbit-streamdeck-companion",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "build:helper": "cargo build --manifest-path helper/Cargo.toml --release --target x86_64-pc-windows-msvc",
+    "stage:helper": "npm run build:helper && node scripts/stage-helper.mjs",
+    "package": "npm run build && npm run stage:helper && streamdeck pack com.orbitos.creator.sdPlugin --output ../public/downloads --force && node scripts/copy-resource.mjs"
+  },
+  "dependencies": {
+    "@elgato/streamdeck": "^2.0.0"
+  },
+  "overrides": {
+    "@elgato/utils": {
+      "zod": "4.6.6"
+    }
+  },
+  "devDependencies": {
+    "@elgato/cli": "^1.10.3",
+    "@rollup/plugin-commonjs": "^29.0.2",
+    "@rollup/plugin-node-resolve": "^15.2.2",
+    "@rollup/plugin-terser": "^1.0.0",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "rollup": "^4.24.0",
+    "tslib": "^2.8.1",
+    "typescript": "~5.8.3"
+  }
+}

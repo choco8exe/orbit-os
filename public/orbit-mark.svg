@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">ORBIT</title>
+  <rect width="128" height="128" rx="26" fill="#0d1726"/>
+  <circle cx="64" cy="64" r="34" fill="none" stroke="#45d9f4" stroke-width="5"/>
+  <ellipse cx="64" cy="64" rx="52" ry="20" fill="none" stroke="#8bb5cb" stroke-width="4" transform="rotate(-34 64 64)"/>
+  <circle cx="64" cy="64" r="11" fill="#e9f5fc"/>
+  <circle cx="100" cy="37" r="5" fill="#45d9f4"/>
+</svg>

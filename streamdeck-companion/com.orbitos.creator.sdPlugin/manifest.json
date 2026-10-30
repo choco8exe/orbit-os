@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "Actions": [
+    {
+      "Icon": "imgs/actions/orbit-control",
+      "Name": "ORBIT Control",
+      "PropertyInspectorPath": "ui/orbit-control.html",
+      "States": [
+        {
+          "Image": "imgs/actions/orbit-control",
+          "ShowTitle": true,
+          "Title": "ORBIT"
+        }
+      ],
+      "Tooltip": "Commandes locales sécurisées pour ORBIT, Echo, Pulsar et Pulse",
+      "UUID": "com.orbitos.creator.orbit-control"
+    }
+  ],
+  "Author": "Choco8exe · ORBIT OS",
+  "Category": "ORBIT Control Center",
+  "CategoryIcon": "imgs/category-icon",
+  "CodePath": "bin/plugin.js",
+  "Description": "Actions locales pour ORBIT, Echo et Pulse, protégées par un appairage révocable.",
+  "Icon": "imgs/plugin",
+  "Name": "ORBIT Control Center",
+  "Nodejs": {
+    "Version": "20"
+  },
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "SDKVersion": 2,
+  "Software": {
+    "MinimumVersion": "7.1"
+  },
+  "UUID": "com.orbitos.creator",
+  "Version": "1.0.0.2"
+}
