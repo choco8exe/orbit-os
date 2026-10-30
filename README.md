@@ -15,7 +15,7 @@ Développé par **Choco8exe**, avec l’aide d’**OpenAI Codex** sur plusieurs 
 
 ## Télécharger et installer
 
-Télécharge le setup Windows depuis [la dernière version publiée](https://github.com/choco8exe/orbit-os/releases/latest). Pour une installation classique, choisis le fichier `ORBIT OS_*_x64-setup.exe`.
+Télécharge le setup Windows depuis [la dernière version publiée](https://github.com/choco8exe/orbit-os/releases/latest). Pour une installation classique, choisis l’asset NSIS x64 au format `.exe`.
 
 Node.js, Rust et Visual Studio ne sont pas nécessaires pour installer ou utiliser l’application. Ils servent uniquement à compiler le projet. Le setup n’est pas signé par Authenticode ; Windows peut donc afficher un avertissement sur l’éditeur. Si le runtime WebView2 manque, l’installation Tauri peut le télécharger ; cette étape nécessite Internet.
 
